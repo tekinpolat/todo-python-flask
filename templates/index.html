@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <link rel= "stylesheet" type= "text/css" href= "{{ url_for('static',filename='css/bootstrap.min.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.14.0/css/all.min.css" />
+    <title>Todo List...</title>
+    <style>
+        .checked{text-decoration: line-through;color:green}
+    </style>
+  </head>
+  <body>
+        <div class="container">
+            <div class="row mt-2">
+                <div class="col-md-6 offset-md-2">
+                    <div class="input-group mb-3">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text" id="basic-addon1">TODO</span>
+                        </div>
+                        <input type="text" class="form-control" id="todo" autofocus placeholder="Todo....">
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 offset-md-2">
+                    <ul class="list-group" id="todos">
+                        
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+    <!-- Optional JavaScript -->
+    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+    <script src="{{ url_for('static', filename='js/jquery-3.5.1.min.js')}}" ></script>
+    <script src="{{ url_for('static', filename='js/notify.js')}}" ></script>
+    <script>
+        $(()=>{
+            console.clear();
+            console.log("%c***Starting Todo List", "color:green;font-size:2em");
+
+            //todo add
+            $("#todo").keyup(function(event){
+                const todo = $(this).val().trim();
+                if(event.keyCode == 13 && todo != ''){
+                    $.post("{{url_for('addtodo')}}", {todo:todo}, function(response){
+                        if(response.result){$('#todo').val('');}
+                        notify(response.result);
+                    },'json')
+                }
+            });
+
+            //todo delete
+            $(document).on('click', '.todo-delete', function(){
+                const id = $(this).parent('span').data('id');
+                $.post("{{url_for('deletetodo')}}", {id:id}, function(response){
+                    notify(response.result);
+                },'json')
+            });
+
+            //status change
+            $(document).on('change', '.status-change', function(){
+                const id = $(this).parent('span').data('id');
+                const status = $(this).data('status') == 'complete' ? 'uncomplete' : 'complete';
+                $.post("{{url_for('statuschangetodo')}}", {id:id, status:status}, function(response){
+                    notify(response.result);
+                },'json')
+            });
+
+            //get todos
+            getTodos();
+
+
+        });
+
+        function notify(status){
+            if(status){
+                getTodos();
+                $.notify('İşlem başarılı..', 'success');
+            }else{
+                $.notify('İşlem başarısız..', 'error');
+            }
+        }
+
+        function getTodos(){
+            $.get("{{url_for('gettodo')}}", function(response){
+                $('#todos').html('');
+                
+                if(response.result == ''){
+                    $('#todos').append(`
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Veri Yok
+                        </li>
+                    `);
+                }else{
+                    let checked = '';
+                    response.result.forEach((todo, index)=>{
+                        checked = todo.status == 'complete' ? 'checked' : '';
+                        index++;
+                        $('#todos').append(`
+                            <li class="list-group-item d-flex justify-content-between align-items-center ${checked}" >
+                                ${index} - ${todo.todo}
+                                <span data-id="${todo.id}">
+                                    <input type="checkbox" class="form-check-input status-change"  data-status="${todo.status}" ${checked}>
+                                    <i class="fas fa-trash-alt text-danger todo-delete"></i>
+                                </span>
+                            </li>
+                        `);
+                    });
+
+                }
+            },'json');
+        }
+    </script>
+  </body>
+</html>
